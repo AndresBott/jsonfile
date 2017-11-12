@@ -4,6 +4,7 @@ class jsonFile:
     _vaulesKey = "_values"
     _exists = False
     _data = {}
+    _indexPrefix = "_i"
 
     def __init__(self, s):
         """
@@ -54,100 +55,137 @@ class jsonFile:
             with open(self._filePath) as data_file:
                 self._data = json.load(data_file)
 
-    def set(self,key=False,value=False,section=False,base=False):
+    def set(self,key=False,value=None,base=False,indexed=False,id=False):
         """
         Store data in the tree json object, where the data is stored will depend on some factors
 
         :param key: string | bool, the key string for the dictionary, if not defined or False passed an auto index will be created
-        :param value: value to be stored
+        :param value: value to be stored, if not defined an empty object will be created
         :param section: bool | string | list pass a string or a list to define the section (sub section) to store the data
          i.e ["level1","level2"] will create { "level1": {"level2":{"key:"value" } } }
          if no section is defined or passed as False, key-value will go to root level i.e: {"key":"value"}
         :param base:  used in the recusrive function
         :return:
         """
-        if value is False:
-            return False
-
-        if section is False:
-            if key is not False and value is not False:
-                self._data[key]=value
-        else:
-            if key is False:
-                print "keyFalse"
-            elif key is not False:
-                if isinstance(section, list):
-                    if base is False:
-                        # avoid recursively creating sections on each recurse iteration
-                        self.createSection(section=section)
-                        base = self._data
-
-                    if len(section) == 1:
-                        base[section[0]][key] = value
-                    elif len(section) > 1:
-                        sectionID = section[0]
-                        secttionCopy = list(section)
-                        secttionCopy.pop(0)
-                        self.set(key=key,value=value,section=secttionCopy, base=base[sectionID])
-
-                else:
-                    self._data[section][key] = value
-                return
-            # if key is False:
-            #
-            #
-            #
-            #     if self._data.get(section) is None:
-            #         self._data[section] = []
-            #     # section not false but key false
-            #     if value is not False:
-            #
-            #         for x in self._data[section]:
-            #             if x["path"] == value:
-            #
-            #                 return
-            #
-            #         self._data[section].append(value)
-            # # else:
-
-    def remove(self,key=False,section=False,base=False):
         if key is False:
             return False
 
-        if section is False:
-            if key is not False and key in self._data:
-                self._data.pop(key)
+        if base is False:
+            base = self._data
+
+        if isinstance(key, basestring):
+            if key not in base:
+                base[key] = {}
+
+            if value is None:
+                base[key] = {}
+            else:
+                self._setValue(base,key,value,indexed,id)
+                # base[key] = value
+        elif isinstance(key, list):
+
+            if len(key) == 1:
+                if value is None:
+                    base[key[0]] = {}
+                else:
+                    self._setValue(base, key[0], value, indexed,id)
+            elif len(key) > 1:
+                sectionID = key[0]
+                secttionCopy = list(key)
+                secttionCopy.pop(0)
+
+                if sectionID not in base:
+                    base[sectionID] = {}
+
+                self.set(key=secttionCopy, value=value, base=base[sectionID])
+
+
+    def _setValue(self, base, key, value,indexed=False,id=False):
+        """
+        private method to save the value, will do different if indexed = True
+        :param base:
+        :param key:
+        :param value:
+        :param indexed:
+        :return:
+        """
+        if indexed is False:
+            base[key]=value
         else:
-            if isinstance(section, list):
+            topIndex = self._getTopIndex(base[key])
+            index = self._indexPrefix + str(topIndex + 1)
+            if id is False:
+                id = index
+            item = {
+                "index":index,
+                "id":id,
+                "value": value
+            }
+
+            base[key][index] = item
+
+
+
+
+    def _getTopIndex(self,data):
+        index = 0
+        n = len(self._indexPrefix)
+
+        for key, val in data.items():
+            indexString = key[:n]
+            if indexString == self._indexPrefix:
+                tindex = int(key[n:])
+                if tindex > index:
+                    index = tindex
+        return index
+
+
+
+    def setMulti(self,key=False,value=None,id=False,base=False,indexed=False):
+        """
+        Call the set method with indexed = true
+        :param key:
+        :param value:
+        :param base:
+        :param indexed:
+        :return:
+        """
+        self.set(key=key,value=value,indexed=True,id=id)
+
+
+
+    def remove(self,key=False,base=False):
+        """
+        Remove a key or section from the tree
+        :param key:
+        :param base:
+        :return:
+        """
+        if key is False:
+            return False
+        else:
+            if isinstance(key, basestring):
+                if key in self._data:
+                    self._data.pop(key)
+                    return True
+                else:
+                    return False
+
+            elif isinstance(key, list):
                 if base is False:
                     base = self._data
 
-                if len(section) == 1 and key in base[section[0]]:
-                    base[section[0]].pop(key)
-                elif len(section) > 1:
-                    sectionID = section[0]
-                    secttionCopy = list(section)
+                if key[0] not in base:
+                    return False
+
+                if len(key) > 1:
+                    sectionID = key[0]
+                    secttionCopy = list(key)
                     secttionCopy.pop(0)
-                    self.remove(key=key, section=secttionCopy, base=base[sectionID])
-
-    def createSection(self,section,base=False):
-
-        if isinstance(section, list):
-
-            if base is False:
-                base = self._data
-
-            if section[0] not in base:
-                base[section[0]] = {}
-
-            if len(section) > 1:
-                sectionID=section[0]
-                secttionCopy = list(section)
-                secttionCopy.pop(0)
-
-                self.createSection(secttionCopy,base=base[sectionID])
-        else:
-            self._data[section]={}
+                    return self.remove(key=secttionCopy, base=base[sectionID])
+                else:
+                    base.pop(key[0])
+                    return True
 
 
     def get(self, key=False, base=False):
@@ -187,17 +225,16 @@ class jsonFile:
             return self._data
 
 
-
-
-
-    def getValueIn(self, key, value, section=False):
+    def getValueIn(self, key, value):
         """
          This function will search for a value in an key:value object and return the object on the first mach,
          or False if not found
          obj = [ {key:val, otherkey:val2 },{ key:val4, otherkey:val3 } ]
         """
         found = False
-        obj = self.get(section=section)
+        obj = self.get(key = key)
+        print obj
+        return
         for x in obj:
             if x[key] == value:
                 found = x
