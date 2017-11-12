@@ -80,15 +80,14 @@ class jsonFile:
             if value is None:
                 base[key] = {}
             else:
-                self._setValue(base,key,value,indexed,id)
-                # base[key] = value
+                base[key] = value
         elif isinstance(key, list):
 
             if len(key) == 1:
                 if value is None:
                     base[key[0]] = {}
                 else:
-                    self._setValue(base, key[0], value, indexed,id)
+                    base[key[0]] = value
             elif len(key) > 1:
                 sectionID = key[0]
                 secttionCopy = list(key)
@@ -98,60 +97,6 @@ class jsonFile:
                     base[sectionID] = {}
 
                 self.set(key=secttionCopy, value=value, base=base[sectionID])
-
-
-    def _setValue(self, base, key, value,indexed=False,id=False):
-        """
-        private method to save the value, will do different if indexed = True
-        :param base:
-        :param key:
-        :param value:
-        :param indexed:
-        :return:
-        """
-        if indexed is False:
-            base[key]=value
-        else:
-            topIndex = self._getTopIndex(base[key])
-            index = self._indexPrefix + str(topIndex + 1)
-            if id is False:
-                id = index
-            item = {
-                "index":index,
-                "id":id,
-                "value": value
-            }
-
-            base[key][index] = item
-
-
-
-
-    def _getTopIndex(self,data):
-        index = 0
-        n = len(self._indexPrefix)
-
-        for key, val in data.items():
-            indexString = key[:n]
-            if indexString == self._indexPrefix:
-                tindex = int(key[n:])
-                if tindex > index:
-                    index = tindex
-        return index
-
-
-
-    def setMulti(self,key=False,value=None,id=False,base=False,indexed=False):
-        """
-        Call the set method with indexed = true
-        :param key:
-        :param value:
-        :param base:
-        :param indexed:
-        :return:
-        """
-        self.set(key=key,value=value,indexed=True,id=id)
-
 
 
     def remove(self,key=False,base=False):
@@ -178,17 +123,21 @@ class jsonFile:
                 if key[0] not in base:
                     return False
 
-                if len(key) > 1:
+                if len(key)== 1:
+                    base.pop(key[0])
+                    return True
+
+                elif len(key) > 1:
                     sectionID = key[0]
                     secttionCopy = list(key)
                     secttionCopy.pop(0)
                     return self.remove(key=secttionCopy, base=base[sectionID])
-                else:
-                    base.pop(key[0])
-                    return True
+
+
 
 
     def get(self, key=False, base=False):
+        # type: (object, object) -> object
         """
         Get the value or part of the json tree of a section in the json
         :param key: (bool)False | string | list
@@ -225,18 +174,3 @@ class jsonFile:
             return self._data
 
 
-    def getValueIn(self, key, value):
-        """
-         This function will search for a value in an key:value object and return the object on the first mach,
-         or False if not found
-         obj = [ {key:val, otherkey:val2 },{ key:val4, otherkey:val3 } ]
-        """
-        found = False
-        obj = self.get(key = key)
-        print obj
-        return
-        for x in obj:
-            if x[key] == value:
-                found = x
-                break
-        return found
