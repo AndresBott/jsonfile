@@ -136,7 +136,7 @@ class jsonFile:
 
 
 
-    def get(self, key=False, base=False):
+    def get(self, key=False,defaultReturn=False, base=False):
         # type: (object, object) -> object
         """
         Get the value or part of the json tree of a section in the json
@@ -153,14 +153,14 @@ class jsonFile:
                 if key in self._data:
                     return self._data[key]
                 else:
-                    return False
+                    return defaultReturn
 
             elif isinstance(key, list):
                 if base is False:
                     base = self._data
 
                 if key[0] not in base:
-                    return False
+                    return defaultReturn
 
                 if len(key) > 1:
                     sectionID = key[0]
